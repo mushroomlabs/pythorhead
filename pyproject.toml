@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "pythorhead"
@@ -27,6 +27,18 @@ dependencies = [
 
 [tool.setuptools]
 license-files = ["LICENSE", "CHANGELOG*"]
+
+[tool.poetry]
+name = "pythorhead"
+version = "v0.15.6"
+readme = "README.md"
+description = "A python library for interacting with Lemmy API"
+authors = ["db0 <mail@dbzer0.com>"]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+requests = ">= 2.31.0,<3.0.0"
+
 
 [options.index-client]
 extra-index-urls = ["https://download.pytorch.org/whl/cu118"]

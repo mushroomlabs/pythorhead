@@ -24,17 +24,13 @@ REQUEST_MAP = {
 
 class Requestor:
     nodeinfo: Optional[dict] = None
-    domain: Optional[str] = None
     raise_exceptions: Optional[bool] = False
 
-    def __init__(self, raise_exceptions = False):
+    def __init__(self, instance_url, raise_exceptions=False):
         self._auth = Authentication()
-        self.set_api_base_url = self._auth.set_api_base_url
         self.raise_exceptions = raise_exceptions
+        self.instance_url = instance_url
 
-    def set_domain(self, domain: str):
-        self.domain = domain
-        self._auth.set_api_base_url(self.domain)
         try:
             headers = {
                 "Sec-Fetch-Dest": "document",
@@ -44,7 +40,7 @@ class Requestor:
                 "Sec-GPC": "1",
                 "User-Agent": "pythorhead/0.5",
             }
-            self.nodeinfo = requests.get(f"{self.domain}/nodeinfo/2.0.json", headers = headers, timeout=2).json()
+            self.nodeinfo = requests.get(f"{self.instance_url}/nodeinfo/2.0.json", headers=headers, timeout=2).json()
         except Exception as err:
             if not self.raise_exceptions:
                 logger.error(f"Problem encountered retrieving Lemmy nodeinfo: {err}")
@@ -54,10 +50,17 @@ class Requestor:
         if software != "lemmy":
             logger.error(f"Domain name does not appear to contain a lemmy software, but instead '{software}")
             return
-        logger.info(f"Connected succesfully to Lemmy v{self.nodeinfo['software']['version']} instance {self.domain}")
+        logger.info(
+            f"Connected succesfully to Lemmy v{self.nodeinfo['software']['version']} instance {self.instance_url}"
+        )
+
+    @property
+    def api_url(self):
+        return f"{self.instance_url}/api/v3"
 
     def api(self, method: Request, endpoint: str, **kwargs) -> Optional[dict]:
         logger.info(f"Requesting API {method} {endpoint}")
+        full_url = f"{self.api_url}{endpoint}"
         if self._auth.token:
             if (data := kwargs.get("json")) is not None:
                 data["auth"] = self._auth.token
@@ -72,7 +75,7 @@ class Requestor:
                 "Sec-GPC": "1",
                 "User-Agent": "pythorhead/0.5",
             }
-            r = REQUEST_MAP[method](f"{self._auth.api_url}{endpoint}", headers = headers, **kwargs)
+            r = REQUEST_MAP[method](full_url, headers=headers, **kwargs)
         except Exception as err:
             if not self.raise_exceptions:
                 logger.error(f"Error encountered while {method} on endpoint {endpoint}: {err}")
@@ -85,17 +88,6 @@ class Requestor:
             else:
                 raise Exception(f"Error encountered while {method} on endpoint {endpoint}: {r.text}")
 
-        return r.json()
-
-    def image(self, method: Request, **kwargs) -> Optional[dict]:
-        logger.info(f"Requesting image {method}")
-        cookies = {}
-        if self._auth.token:
-            cookies["jwt"] = self._auth.token
-        r = REQUEST_MAP[method](self._auth.image_url, cookies=cookies, **kwargs)
-        if not r.ok:
-            logger.error(f"Error encountered while {method}: {r.text}")
-            return
         return r.json()
 
     def log_in(self, username_or_email: str, password: str, totp: Optional[str] = None) -> bool:

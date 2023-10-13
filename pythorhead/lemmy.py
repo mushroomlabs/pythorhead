@@ -10,19 +10,19 @@ from pythorhead.post import Post
 from pythorhead.private_message import PrivateMessage
 from pythorhead.requestor import Request, Requestor
 from pythorhead.site import Site
-from pythorhead.types import FeatureType, ListingType, SortType, SearchType, SearchOption
+from pythorhead.types import ListingType, SortType, SearchType, SearchOption
 from pythorhead.user import User
 from pythorhead.admin import Admin
 
 logger = logging.getLogger(__name__)
 
+
 class Lemmy:
     _known_communities = {}
     _requestor: Requestor
 
-    def __init__(self, api_base_url: str, raise_exceptions = False) -> None:
-        self._requestor = Requestor(raise_exceptions)
-        self._requestor.set_domain(api_base_url)
+    def __init__(self, api_base_url: str, raise_exceptions=False) -> None:
+        self._requestor = Requestor(instance_url=api_base_url, raise_exceptions=raise_exceptions)
         self.post = Post(self._requestor)
         self.community = Community(self._requestor)
         self.comment = Comment(self._requestor)
@@ -46,22 +46,16 @@ class Lemmy:
 
         request = self.community.get(name=community_name)
         if request is None and search != SearchOption.No:
-            search_result = self.search(
-                q=community_name,
-                type_=SearchType.Communities
-            )
+            search_result = self.search(q=community_name, type_=SearchType.Communities)
             if search_result is None:
                 return None
-            if len(search_result['communities']) == 0:
+            if len(search_result["communities"]) == 0:
                 if search != SearchOption.Retry:
                     return None
                 logger.info(f"Community '{community_name}' not found via search. Attempting wait and retry")
                 time.sleep(5)
-                search_result = self.search(
-                    q=community_name,
-                    type_=SearchType.Communities
-                )
-                if len(search_result['communities']) > 0:
+                search_result = self.search(q=community_name, type_=SearchType.Communities)
+                if len(search_result["communities"]) > 0:
                     request = self.community.get(name=community_name)
         if request is not None:
             community_id = request["community_view"]["community"]["id"]
